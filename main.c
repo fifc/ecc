@@ -86,7 +86,6 @@ int processor(int iteration) {
                 processor_cleanup(key, ciphered, hex_pub, hex_priv, text, copy, original);
                 return -1;
         }
-	printf("pub: %s\nprv: %s\n", hex_pub, hex_priv);
 
         if (!(ciphered = ecies_encrypt(hex_pub, text, tlen))) {
                 printf("The encryption process failed!\n");
@@ -137,7 +136,7 @@ int main() {
         // Comment this line out if you want the program to execute consistently each time.
         srand(time(NULL));
 
-        for (uint64_t i = 0; i < 4; i++) {
+        for (uint64_t i = 0; i < 100; i++) {
                 if (processor(i)) {
                         cleanup();
                         return 1;
