@@ -12,8 +12,7 @@
 
 #include "ecies.h"
 
-void * ecies_key_derivation(const void *input, size_t ilen, void *output, 
-size_t *olen) {
+void * ecies_key_derivation(const void *input, size_t ilen, void *output, size_t *olen) {
 
         if (*olen < SHA512_DIGEST_LENGTH) {
                 return NULL;
@@ -33,7 +32,7 @@ secure_t * ecies_encrypt(char *pubkey, unsigned char *data, size_t length) {
         EC_KEY *user, *ephemeral;
         size_t envelope_length, block_length, key_length;
         unsigned char envelope_key[SHA512_DIGEST_LENGTH], 
-iv[EVP_MAX_IV_LENGTH], block[EVP_MAX_BLOCK_LENGTH];
+	iv[EVP_MAX_IV_LENGTH], block[EVP_MAX_BLOCK_LENGTH];
 
         // Make sure we are generating enough key material for the symmetric ciphers.
         if ((key_length = EVP_CIPHER_key_length(ECIES_CIPHER)) * 2 > SHA512_DIGEST_LENGTH) {
@@ -75,9 +74,8 @@ iv[EVP_MAX_IV_LENGTH], block[EVP_MAX_BLOCK_LENGTH];
         }
 
         // We use a conditional to pad the length if the input buffer is not evenly divisible by the block size.
-        if (!(cryptex = secure_alloc(envelope_length, 
-					EVP_MD_size(ECIES_HASHER), length, length + (length % block_length ? 
-						(block_length - (length % block_length)) : 0)))) {
+        if (!(cryptex = secure_alloc(envelope_length, EVP_MD_size(ECIES_HASHER),
+					length, length + (length % block_length ? (block_length - (length % block_length)) : 0)))) {
                 printf("Unable to allocate a secure_t buffer to hold the encrypted result.\n");
                 EC_KEY_free(ephemeral);
                 EC_KEY_free(user);
@@ -157,8 +155,7 @@ NULL));
         // Advance the pointer, then use pointer arithmetic to calculate how much of the body buffer has been used. The complex logic is needed so that we get
         // the correct status regardless of whether there was a partial data block.
         body += body_length;
-        if ((body_length = secure_body_length(cryptex) - (body - 
-					secure_body_data(cryptex))) < 0) {
+        if ((body_length = secure_body_length(cryptex) - (body - secure_body_data(cryptex))) < 0) {
 		printf("The symmetric cipher overflowed!\n");
                 EVP_CIPHER_CTX_free(cipher);
                 secure_free(cryptex);
@@ -179,11 +176,9 @@ NULL));
         mac_length = secure_mac_length(cryptex);
 
         // At the moment we are generating the hash using encrypted data. At some point we may want to validate the original text instead.
-        if (HMAC_Init_ex(hmac, envelope_key + key_length, key_length, 
-				ECIES_HASHER, NULL) != 1 || HMAC_Update(hmac, secure_body_data(cryptex), 
-					secure_body_length(cryptex))
-			!= 1 || HMAC_Final(hmac, secure_mac_data(cryptex), 
-				&mac_length) != 1) {
+        if (HMAC_Init_ex(hmac, envelope_key + key_length, key_length, ECIES_HASHER, NULL) != 1
+			|| HMAC_Update(hmac, secure_body_data(cryptex), secure_body_length(cryptex)) != 1
+			|| HMAC_Final(hmac, secure_mac_data(cryptex), &mac_length) != 1) {
                 printf("Unable to generate a data authentication code. {error = %s}\n", ERR_error_string(ERR_get_error(), NULL));
                 HMAC_CTX_free(hmac);
                 secure_free(cryptex);
@@ -241,11 +236,10 @@ unsigned char * ecies_decrypt(char *privkey, secure_t *cryptex, size_t *length) 
         HMAC_CTX * hmac = HMAC_CTX_new();
 
         // At the moment we are generating the hash using encrypted data. At some point we may want to validate the original text instead.
-        if (HMAC_Init_ex(hmac, envelope_key + key_length, key_length, 
-				ECIES_HASHER, NULL) != 1 || HMAC_Update(hmac, secure_body_data(cryptex), 
-					secure_body_length(cryptex)) != 1 || HMAC_Final(hmac, md, &mac_length) != 1) {
-                printf("Unable to generate the authentication code needed for validation. {error = %s}\n",
-				ERR_error_string(ERR_get_error(), NULL));
+        if (HMAC_Init_ex(hmac, envelope_key + key_length, key_length, ECIES_HASHER, NULL) != 1
+			|| HMAC_Update(hmac, secure_body_data(cryptex), secure_body_length(cryptex)) != 1
+			|| HMAC_Final(hmac, md, &mac_length) != 1) {
+                printf("Unable to generate the authentication code needed for validation. {error = %s}\n", ERR_error_string(ERR_get_error(), NULL));
                 HMAC_CTX_free(hmac);
                 return NULL;
         }

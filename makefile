@@ -1,4 +1,4 @@
-CC=gcc-8
+CC=gcc
 CFLAGS=-Wall -O3
 all: ecc
 ecc:  main.o ecies.o keys.o
