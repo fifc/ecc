@@ -28,7 +28,9 @@ secure_t * ecies_encrypt(char *pubkey, unsigned char *data, size_t length) {
         int body_length;
         secure_t *cryptex;
         
+#ifdef __HMAC__
         unsigned int mac_length;
+#endif
         EC_KEY *user, *ephemeral;
         size_t envelope_length, block_length, key_length;
         unsigned char envelope_key[SHA512_DIGEST_LENGTH], 
@@ -63,9 +65,8 @@ secure_t * ecies_encrypt(char *pubkey, unsigned char *data, size_t length) {
         }
 
         // Determine the envelope and block lengths so we can allocate a buffer for the result.
-        if ((block_length = EVP_CIPHER_block_size(ECIES_CIPHER)) == 0 || 
-			block_length > EVP_MAX_BLOCK_LENGTH || (envelope_length = EC_POINT_point2oct(EC_KEY_get0_group(
-						ephemeral), EC_KEY_get0_public_key(ephemeral), 
+        if ((block_length = EVP_CIPHER_block_size(ECIES_CIPHER)) == 0 || block_length > EVP_MAX_BLOCK_LENGTH ||
+			(envelope_length = EC_POINT_point2oct(EC_KEY_get0_group( ephemeral), EC_KEY_get0_public_key(ephemeral), 
 					POINT_CONVERSION_COMPRESSED, NULL, 0, NULL)) == 0) {
 		printf("Invalid block or envelope length. {block = %zu / envelope = %zu}\n", block_length, envelope_length);
 		EC_KEY_free(ephemeral);
@@ -74,8 +75,12 @@ secure_t * ecies_encrypt(char *pubkey, unsigned char *data, size_t length) {
         }
 
         // We use a conditional to pad the length if the input buffer is not evenly divisible by the block size.
+#ifdef __HMAC__
         if (!(cryptex = secure_alloc(envelope_length, EVP_MD_size(ECIES_HASHER),
 					length, length + (length % block_length ? (block_length - (length % block_length)) : 0)))) {
+#else
+        if (!(cryptex = secure_alloc(envelope_length, length, length + (length % block_length ? (block_length - (length % block_length)) : 0)))) {
+#endif // __HMAC__
                 printf("Unable to allocate a secure_t buffer to hold the encrypted result.\n");
                 EC_KEY_free(ephemeral);
                 EC_KEY_free(user);
@@ -108,9 +113,9 @@ NULL));
         body_length = secure_body_length(cryptex);
 
         // Initialize the cipher with the envelope key.
-        if (EVP_EncryptInit_ex(cipher, ECIES_CIPHER, NULL, envelope_key, iv) 
-			!= 1 || EVP_CIPHER_CTX_set_padding(cipher, 0) != 1 || 
-			EVP_EncryptUpdate(cipher, body, &body_length, data, length - (length % block_length)) != 1) {
+        if (EVP_EncryptInit_ex(cipher, ECIES_CIPHER, NULL, envelope_key, iv) != 1
+			|| EVP_CIPHER_CTX_set_padding(cipher, 0) != 1
+			|| EVP_EncryptUpdate(cipher, body, &body_length, data, length - (length % block_length)) != 1) {
                 printf("An error occurred while trying to secure the data using the chosen symmetric cipher. {error = %s}\n", ERR_error_string(ERR_get_error(), 
 NULL));
                 EVP_CIPHER_CTX_free(cipher);
@@ -171,6 +176,7 @@ NULL));
 
         EVP_CIPHER_CTX_free(cipher);
 
+#ifdef __HMAC__
         // Generate an authenticated hash which can be used to validate the data during decryption.
         HMAC_CTX *hmac = HMAC_CTX_new();
         mac_length = secure_mac_length(cryptex);
@@ -186,6 +192,7 @@ NULL));
         }
 
         HMAC_CTX_free(hmac);
+#endif // __HMAC__
 
         return cryptex;
 }
@@ -194,9 +201,11 @@ unsigned char * ecies_decrypt(char *privkey, secure_t *cryptex, size_t *length) 
         size_t key_length;
         int output_length;
         EC_KEY *user, *ephemeral;
+#ifdef __HMAC__
+	unsigned char md[EVP_MAX_MD_SIZE];
         unsigned int mac_length = EVP_MAX_MD_SIZE;
-        unsigned char envelope_key[SHA512_DIGEST_LENGTH], 
-		      iv[EVP_MAX_IV_LENGTH], md[EVP_MAX_MD_SIZE], *block, *output;
+#endif // __HMAC__
+        unsigned char envelope_key[SHA512_DIGEST_LENGTH], iv[EVP_MAX_IV_LENGTH],  *block, *output;
 
         // Make sure we are generating enough key material for the symmetric ciphers.
         if ((key_length = EVP_CIPHER_key_length(ECIES_CIPHER)) * 2 > SHA512_DIGEST_LENGTH) {
@@ -232,6 +241,7 @@ unsigned char * ecies_decrypt(char *privkey, secure_t *cryptex, size_t *length) 
         EC_KEY_free(ephemeral);
         EC_KEY_free(user);
 
+#ifdef __HMAC__
         // Use the authenticated hash of the ciphered data to ensure it was not modified after being encrypted.
         HMAC_CTX * hmac = HMAC_CTX_new();
 
@@ -251,6 +261,7 @@ unsigned char * ecies_decrypt(char *privkey, secure_t *cryptex, size_t *length) 
                 printf("The authentication code was invalid! The ciphered data has been corrupted!\n");
                 return NULL;
         }
+#endif // __HMAC__
 
         // Create a buffer to hold the result.
         output_length = secure_body_length(cryptex);
@@ -266,10 +277,9 @@ unsigned char * ecies_decrypt(char *privkey, secure_t *cryptex, size_t *length) 
         EVP_CIPHER_CTX *cipher = EVP_CIPHER_CTX_new();
 
         // Decrypt the data using the chosen symmetric cipher.
-	if (EVP_DecryptInit_ex(cipher, ECIES_CIPHER, NULL, envelope_key, iv) 
-			!= 1 || EVP_CIPHER_CTX_set_padding(cipher, 0) != 1 || 
-			EVP_DecryptUpdate(cipher, block, &output_length, secure_body_data(cryptex), 
-				secure_body_length(cryptex)) != 1) {
+	if (EVP_DecryptInit_ex(cipher, ECIES_CIPHER, NULL, envelope_key, iv) != 1
+			|| EVP_CIPHER_CTX_set_padding(cipher, 0) != 1
+			|| EVP_DecryptUpdate(cipher, block, &output_length, secure_body_data(cryptex), secure_body_length(cryptex)) != 1) {
 		printf("Unable to decrypt the data using the chosen symmetric cipher. {error = %s}\n", ERR_error_string(ERR_get_error(), NULL));
                 EVP_CIPHER_CTX_free(cipher);
                 free(output);

@@ -27,13 +27,17 @@
 #define ECIES_CURVE NID_secp521r1
 //#define ECIES_CURVE NID_secp256k1
 #define ECIES_CIPHER EVP_aes_256_cbc()
+#ifdef __HMAC__
 #define ECIES_HASHER EVP_sha512()
+#endif // __HMAC__
 
 typedef struct {
 
         struct {
                 uint64_t key;
+#ifdef __HMAC__
                 uint64_t mac;
+#endif // __HMAC))
                 uint64_t orig;
                 uint64_t body;
         } length;
@@ -44,14 +48,20 @@ typedef char * secure_t;
 
 void secure_free(secure_t *cryptex);
 void * secure_key_data(secure_t *cryptex);
+#ifdef __HMAC__
 void * secure_mac_data(secure_t *cryptex);
+uint64_t secure_mac_length(secure_t *cryptex);
+#endif
 void * secure_body_data(secure_t *cryptex);
 uint64_t secure_key_length(secure_t *cryptex);
-uint64_t secure_mac_length(secure_t *cryptex);
 uint64_t secure_body_length(secure_t *cryptex);
 uint64_t secure_orig_length(secure_t *cryptex);
 uint64_t secure_total_length(secure_t *cryptex);
+#ifdef __HMAC__
 void * secure_alloc(uint64_t key, uint64_t mac, uint64_t orig, uint64_t body);
+#else
+void * secure_alloc(uint64_t key, uint64_t orig, uint64_t body);
+#endif
 
 void ecies_group_init(void);
 void ecies_group_free(void);

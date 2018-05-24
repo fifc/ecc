@@ -343,10 +343,12 @@ uint64_t secure_key_length(secure_t *cryptex) {
         return head->length.key;
 }
 
+#ifdef __HMAC__
 uint64_t secure_mac_length(secure_t *cryptex) {
         secure_head_t *head = (secure_head_t *)cryptex;
         return head->length.mac;
 }
+#endif // __HMAC__
 
 uint64_t secure_body_length(secure_t *cryptex) {
         secure_head_t *head = (secure_head_t *)cryptex;
@@ -358,10 +360,13 @@ uint64_t secure_orig_length(secure_t *cryptex) {
         return head->length.orig;
 }
 
-uint64_t secure_total_length(secure_t *cryptex) {
+uint64_t secure_total_length1(secure_t *cryptex) {
         secure_head_t *head = (secure_head_t *)cryptex;
-        return sizeof(secure_head_t) + (head->length.key + head->length.mac + 
-head->length.body);
+#ifdef __HMAC__
+        return sizeof(secure_head_t) + (head->length.key + head->length.mac + head->length.body);
+#else
+        return sizeof(secure_head_t) + (head->length.key + head->length.body);
+#endif // __HMAC__
 }
 
 void * secure_key_data(secure_t *cryptex) {
@@ -375,10 +380,14 @@ void * secure_mac_data(secure_t *cryptex) {
 
 void * secure_body_data(secure_t *cryptex) {
         secure_head_t *head = (secure_head_t *)cryptex;
-        return (char *)cryptex + (sizeof(secure_head_t) + head->length.key + 
-head->length.mac);
+#ifdef __HMAC__
+        return (char *)cryptex + (sizeof(secure_head_t) + head->length.key + head->length.mac);
+#else
+        return (char *)cryptex + (sizeof(secure_head_t) + head->length.key);
+#endif // __HMAC__
 }
 
+#ifdef __HMAC__
 void * secure_alloc(uint64_t key, uint64_t mac, uint64_t orig, uint64_t body) {
         secure_t *cryptex = malloc(sizeof(secure_head_t) + key + mac + body);
         secure_head_t *head = (secure_head_t *)cryptex;
@@ -388,6 +397,16 @@ void * secure_alloc(uint64_t key, uint64_t mac, uint64_t orig, uint64_t body) {
         head->length.body = body;
         return cryptex;
 }
+#else
+void * secure_alloc(uint64_t key, uint64_t orig, uint64_t body) {
+        secure_t *cryptex = malloc(sizeof(secure_head_t) + key + body);
+        secure_head_t *head = (secure_head_t *)cryptex;
+        head->length.key = key;
+        head->length.orig = orig;
+        head->length.body = body;
+        return cryptex;
+}
+#endif // __HMAC__
 
 void secure_free(secure_t *cryptex) {
         free(cryptex);
