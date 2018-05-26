@@ -88,10 +88,9 @@ secure_t * ecies_encrypt(char *pubkey, unsigned char *data, size_t length) {
         }
 
         // Store the public key portion of the ephemeral key.
-        if (EC_POINT_point2oct(EC_KEY_get0_group(ephemeral), 
-				EC_KEY_get0_public_key(ephemeral), POINT_CONVERSION_COMPRESSED, 
-				secure_key_data(cryptex), envelope_length,
-				NULL) != envelope_length) {
+        if (EC_POINT_point2oct(EC_KEY_get0_group(ephemeral),
+				EC_KEY_get0_public_key(ephemeral), POINT_CONVERSION_COMPRESSED,
+				secure_key_data(cryptex), envelope_length, NULL) != envelope_length) {
                 printf("An error occurred while trying to record the public portion of the envelope key. {error = %s}\n", ERR_error_string(ERR_get_error(), 
 NULL));
                 EC_KEY_free(ephemeral);
@@ -228,9 +227,7 @@ unsigned char * ecies_decrypt(char *privkey, secure_t *cryptex, size_t *length) 
 
         // Use the intersection of the provided keys to generate the envelope data used by the ciphers below. The ecies_key_derivation() function uses
         // SHA 512 to ensure we have a sufficient amount of envelope key material and that the material created is sufficiently secure.
-	else if (ECDH_compute_key(envelope_key, SHA512_DIGEST_LENGTH, 
-				EC_KEY_get0_public_key(ephemeral), user, ecies_key_derivation) != 
-			SHA512_DIGEST_LENGTH) {
+	else if (ECDH_compute_key(envelope_key, SHA512_DIGEST_LENGTH, EC_KEY_get0_public_key(ephemeral), user, ecies_key_derivation) != SHA512_DIGEST_LENGTH) {
                 printf("An error occurred while trying to compute the envelope key. {error = %s}\n", ERR_error_string(ERR_get_error(), NULL));
                 EC_KEY_free(ephemeral);
                 EC_KEY_free(user);
