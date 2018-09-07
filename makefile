@@ -8,4 +8,4 @@ rsa:  rsa.o
 aes:  aes.o
 	${CC} -o $@ $^ -lssl -lcrypto
 clean:
-	rm -f main.o ecies.o keys.o ecc
+	rm -f *.o ecc aes rsa
