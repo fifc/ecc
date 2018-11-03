@@ -9,7 +9,7 @@ void handleErrors(void)
     unsigned long errCode;
 
     printf("An error occurred\n");
-    while(errCode = ERR_get_error())
+    while((errCode = ERR_get_error()))
     {
         char *err = ERR_error_string(errCode, NULL);
         printf("%s\n", err);
@@ -148,16 +148,16 @@ int main(int arc, char *argv[])
     /* Set up the key and iv. Do I need to say to not hard code these in a real application? :-) */
 
     /* A 256 bit key */
-    static const unsigned char key[] = "01234567890123456789012345678901";
+    static const char *key = "01234567890123456789012345678901";
 
     /* A 128 bit IV */
-    static const unsigned char iv[] = "0123456789012345";
+    static const char *iv = "0123456789012345";
 
     /* Message to be encrypted */
-    unsigned char plaintext[] = "The quick brown fox jumps over the lazy dog";
+    char *plaintext = "The quick brown fox jumps over the lazy dog";
 
     /* Some additional data to be authenticated */
-    static const unsigned char aad[] = "Some AAD data";
+    static const char *aad = "Some AAD data";
 
     /* Buffer for ciphertext. Ensure the buffer is long enough for the
      * ciphertext which may be longer than the plaintext, dependant on the
@@ -174,7 +174,7 @@ int main(int arc, char *argv[])
     int decryptedtext_len = 0, ciphertext_len = 0;
 
     /* Encrypt the plaintext */
-    ciphertext_len = encrypt(plaintext, strlen(plaintext), aad, strlen(aad), key, iv, ciphertext, tag);
+    ciphertext_len = encrypt((unsigned char*)plaintext, strlen((char*)plaintext), (unsigned char*)aad, strlen((char*)aad), (unsigned char*)key, (unsigned char*)iv, ciphertext, tag);
 
     /* Do something useful with the ciphertext here */
     printf("Ciphertext is:\n");
