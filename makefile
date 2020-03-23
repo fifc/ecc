@@ -1,4 +1,3 @@
-CC=gcc
 CFLAGS=-Wall -O3 -D__HMAC__
 all: ecc rsa aes
 ecc:  main.o ecies.o keys.o
