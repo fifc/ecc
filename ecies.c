@@ -32,7 +32,7 @@ secure_t * ecies_encrypt(char *pubkey, unsigned char *data, size_t length) {
         unsigned int mac_length;
 #endif
         EC_KEY *user, *ephemeral;
-        size_t envelope_length, block_length, key_length;
+        size_t block_length, key_length;
         unsigned char envelope_key[SHA512_DIGEST_LENGTH], 
 	iv[EVP_MAX_IV_LENGTH], block[EVP_MAX_BLOCK_LENGTH];
 
@@ -64,10 +64,9 @@ secure_t * ecies_encrypt(char *pubkey, unsigned char *data, size_t length) {
                 return NULL;
         }
 
+	size_t envelope_length = EC_POINT_point2oct(EC_KEY_get0_group( ephemeral), EC_KEY_get0_public_key(ephemeral), POINT_CONVERSION_COMPRESSED, NULL, 0, NULL);
         // Determine the envelope and block lengths so we can allocate a buffer for the result.
-        if ((block_length = EVP_CIPHER_block_size(ECIES_CIPHER)) == 0 || block_length > EVP_MAX_BLOCK_LENGTH ||
-			(envelope_length = EC_POINT_point2oct(EC_KEY_get0_group( ephemeral), EC_KEY_get0_public_key(ephemeral), 
-					POINT_CONVERSION_COMPRESSED, NULL, 0, NULL)) == 0) {
+        if ((block_length = EVP_CIPHER_block_size(ECIES_CIPHER)) == 0 || block_length > EVP_MAX_BLOCK_LENGTH || envelope_length == 0) {
 		printf("Invalid block or envelope length. {block = %zu / envelope = %zu}\n", block_length, envelope_length);
 		EC_KEY_free(ephemeral);
                 EC_KEY_free(user);
