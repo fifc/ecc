@@ -136,7 +136,7 @@ int main() {
         // Comment this line out if you want the program to execute consistently each time.
         srand(time(NULL));
 
-        for (uint64_t i = 0; i < 100; i++) {
+        for (long i = 0; i < 100; i++) {
                 if (processor(i)) {
                         cleanup();
                         return 1;
